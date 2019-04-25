@@ -27,7 +27,7 @@ class export_product_with_inventory_file(models.TransientModel):
         #fp = StringIO()
         #workbook = xlsxwriter.Workbook(fp, {'in_memory': True})
         
-        filename = 'products_%s.xls'%(datetime.today().strftime("%Y_%m_%d_%H_%M_%S"))
+        filename = 'products_%s.xlsx'%(datetime.today().strftime("%Y_%m_%d_%H_%M_%S"))
         workbook = xlwt.Workbook()
         bold = xlwt.easyxf("font: bold on;")
         
@@ -45,7 +45,7 @@ class export_product_with_inventory_file(models.TransientModel):
         #worksheet = workbook.add_worksheet('Products')
         worksheet = workbook.add_sheet('Products')
         
-        headers = ['id','categ_id/name','name','barcode','default_code','unit_of_measurement','type','route_ids/id','purchase_ok','sale_ok','standard_price','lst_price','seller_ids/name/name']
+        headers = ['id','categ_id/name','name','barcode','default_code','unit_of_measurement','uom_po_id','l10n_mx_edi_code_sat_id','supplier_taxes_id','taxes_id','type','route_ids/id','purchase_ok','sale_ok','standard_price','lst_price','seller_ids/name/name']
         warehouse_ids = []
         product_obj = self.env['product.product']
         product_ids = products.ids
@@ -88,6 +88,23 @@ class export_product_with_inventory_file(models.TransientModel):
                 route_ids = ','.join(xml_ids) or False
             else:
                 route_ids=''
+            if product.supplier_taxes_id:
+                # xml_ids = [xid for _, xid in self.__ensure_xml_id_custom(product.supplier_taxes_id)]
+                # supplier_taxes_ids = ','.join(xml_ids) or False
+                supplier_taxes_ids = ','.join([tax.name for tax in product.supplier_taxes_id])
+            else:
+                supplier_taxes_ids = ''
+            if product.taxes_id:
+                # xml_ids = [xid for _, xid in self.__ensure_xml_id_custom(product.taxes_id)]
+                # customer_taxes_ids = ','.join(xml_ids) or False
+                customer_taxes_ids = ','.join([tax.name for tax in product.taxes_id])
+            else:
+                customer_taxes_ids = ''
+            if product.l10n_mx_edi_code_sat_id:
+                xml_ids = [xid for _, xid in self.__ensure_xml_id_custom(product.l10n_mx_edi_code_sat_id)]
+                l10n_mx_edi_code_sat_id = ','.join(xml_ids) or False
+            else:
+                l10n_mx_edi_code_sat_id = ''
             i=0
             worksheet.write(row_index, i, product_xml_ids.get(product.id))
             i +=1
@@ -100,6 +117,14 @@ class export_product_with_inventory_file(models.TransientModel):
             worksheet.write(row_index, i, product.default_code or '')
             i +=1
             worksheet.write(row_index, i, product.uom_id.name)
+            i +=1
+            worksheet.write(row_index, i, product.uom_po_id.name)
+            i +=1
+            worksheet.write(row_index, i, product.l10n_mx_edi_code_sat_id.code)
+            i +=1
+            worksheet.write(row_index, i, supplier_taxes_ids)
+            i +=1
+            worksheet.write(row_index, i, customer_taxes_ids)
             i +=1
             worksheet.write(row_index, i, product.type)
             i +=1
@@ -212,7 +237,7 @@ class export_product_with_inventory_file(models.TransientModel):
         )
         self.env['ir.model.data'].invalidate_cache(fnames=fields)
 
-        return list(
+        return (
             (record.id, to_xid(record.id))
             for record in records
         )
